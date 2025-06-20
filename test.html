@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный AI-тест</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        .main-section.hidden {
+            display: none;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        #quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            color: #555;
+            flex-wrap: wrap;
+        }
+        #stopwatch {
+            font-weight: bold;
+            color: #17a2b8;
+        }
+        #question-text {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #000;
+            min-height: 60px;
+        }
+        #answer-input {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 1rem;
+        }
+        .button {
+            display: inline-block;
+            width: 100%;
+            padding: 0.8rem 1rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 0.5rem;
+        }
+        .button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #navigation-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        #result-area {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: left;
+            line-height: 1.6;
+            font-size: 1rem;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #result-area.correct {
+            background-color: #e9f7ef;
+            border: 1px solid #5cb85c;
+            color: #3c763d;
+        }
+        #result-area.wrong {
+            background-color: #f8d7da;
+            border: 1px solid #d9534f;
+            color: #a94442;
+        }
+        #result-area.loading {
+            background-color: #f0f0f0;
+            color: #555;
+            text-align: center;
+        }
+        #menu-section ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #menu-section li {
+            margin-bottom: 1rem;
+        }
+        #status-message {
+            margin-top: 1rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Секция 1: Ввод API ключа -->
+        <div id="api-key-section" class="main-section">
+            <h1>Введите ваш API ключ</h1>
+            <p>Для работы теста требуется API ключ от Google AI. Получить его можно в <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Ваш ключ будет сохранен в браузере.</p>
+            <input type="password" id="api-key-input" placeholder="Введите ваш Gemini API Key" style="width: 100%; padding: 0.5rem; box-sizing: border-box;">
+            <button id="save-api-key-btn" class="button">Сохранить и перейти к выбору теста</button>
+        </div>
+
+        <!-- Секция 2: Меню выбора теста -->
+        <div id="menu-section" class="main-section hidden">
+            <h1>Выберите тест</h1>
+            <ul id="quiz-list"></ul>
+            <p id="menu-status" style="color: red;"></p>
+        </div>
+
+        <!-- Секция 3: Прохождение теста -->
+        <div id="quiz-section" class="main-section hidden">
+            <div id="quiz-header">
+                <span id="question-counter"></span>
+                <span id="score">Счет: 0</span>
+                <span id="stopwatch">00:00:00</span>
+            </div>
+            <h2 id="question-text"></h2>
+            <input type="text" id="answer-input" placeholder="Введите ваш ответ здесь...">
+            <button id="submit-btn" class="button">Ответить</button>
+            <div id="result-area" class="hidden"></div>
+            <div id="navigation-buttons">
+                <button id="prev-question-btn" class="button">Назад</button>
+                <button id="next-question-btn" class="button">Далее</button>
+            </div>
+             <button id="finish-btn" class="button" style="background-color: #dc3545;">Завершить тест</button>
+        </div>
+
+        <!-- Секция 4: Финальные результаты -->
+        <div id="final-results" class="main-section hidden">
+            <h1>Тест завершен!</h1>
+            <h2 id="final-score"></h2>
+            <p id="final-time"></p>
+            <button id="back-to-menu-btn" class="button">Вернуться в меню</button>
+        </div>
+    </div>
+
+<script>
+// --- КОНФИГУРАЦИЯ ---
+const GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
+const GEMINI_MODEL_NAME = "gemini-1.5-flash-latest";
+
+// Список тестов. Ключ - название, значение - URL к JSON-файлу
+const QUIZZES = {
+    "Общие знания": "https://api.npoint.io/407335def81a38437920",
+    "Столицы мира": "https://api.npoint.io/9a7101853023023b3206",
+    // Вы можете добавить сюда свои тесты
+    // "Мой супер-тест": "https://example.com/path/to/my_quiz.json"
+};
+
+// --- DOM-ЭЛЕМЕНТЫ ---
+const sections = document.querySelectorAll('.main-section');
+const apiKeyInput = document.getElementById('api-key-input');
+const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+const quizListContainer = document.getElementById('quiz-list');
+const menuStatusEl = document.getElementById('menu-status');
+const questionCounterEl = document.getElementById('question-counter');
+const scoreEl = document.getElementById('score');
+const stopwatchEl = document.getElementById('stopwatch');
+const questionTextEl = document.getElementById('question-text');
+const answerInput = document.getElementById('answer-input');
+const submitBtn = document.getElementById('submit-btn');
+const resultArea = document.getElementById('result-area');
+const prevQuestionBtn = document.getElementById('prev-question-btn');
+const nextQuestionBtn = document.getElementById('next-question-btn');
+const finishBtn = document.getElementById('finish-btn');
+const finalScoreEl = document.getElementById('final-score');
+const finalTimeEl = document.getElementById('final-time');
+const backToMenuBtn = document.getElementById('back-to-menu-btn');
+
+// --- СОСТОЯНИЕ ПРИЛОЖЕНИЯ ---
+let GEMINI_API_KEY = '';
+let quizData = [];
+let currentQuestionIndex = 0;
+let score = 0;
+let stopwatchInterval;
+let quizStartTime;
+
+// --- ФУНКЦИИ ---
+
+// Показывает нужную секцию, скрывая остальные
+function showSection(sectionId) {
+    sections.forEach(section => {
+        if (section.id === sectionId) {
+            section.classList.remove('hidden');
+        } else {
+            section.classList.add('hidden');
+        }
+    });
+}
+
+// Инициализация приложения
+document.addEventListener('DOMContentLoaded', () => {
+    GEMINI_API_KEY = localStorage.getItem('gemini_api_key');
+    if (GEMINI_API_KEY) {
+        populateMenu();
+        showSection('menu-section');
+    } else {
+        showSection('api-key-section');
+    }
+});
+
+// Сохранение API ключа
+saveApiKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    if (key) {
+        GEMINI_API_KEY = key;
+        localStorage.setItem('gemini_api_key', key);
+        populateMenu();
+        showSection('menu-section');
+    } else {
+        alert('Пожалуйста, введите API ключ.');
+    }
+});
+
+// Заполнение меню кнопками для выбора теста
+function populateMenu() {
+    quizListContainer.innerHTML = ''; // Очищаем список
+    for (const [name, url] of Object.entries(QUIZZES)) {
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        button.textContent = name;
+        button.className = 'button';
+        button.onclick = () => startQuiz(url);
+        li.appendChild(button);
+        quizListContainer.appendChild(li);
+    }
+}
+
+// Загрузка данных теста и запуск
+async function startQuiz(url) {
+    menuStatusEl.textContent = 'Загрузка вопросов...';
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        quizData = await response.json();
+        
+        // Инициализируем состояние для хранения ответов
+        quizData.forEach(q => {
+            q.userAnswer = null;
+            q.aiFeedback = null;
+            q.isCorrect = null;
+        });
+
+        currentQuestionIndex = 0;
+        score = 0;
+        updateScore();
+        startStopwatch();
+        showSection('quiz-section');
+        loadQuestion();
+    } catch (error) {
+        menuStatusEl.textContent = `Ошибка загрузки теста: ${error.message}`;
+        console.error("Ошибка загрузки теста:", error);
+    } finally {
+        setTimeout(() => { menuStatusEl.textContent = ''; }, 3000);
+    }
+}
+
+// Загрузка текущего вопроса
+function loadQuestion() {
+    // Сброс предыдущего состояния перед загрузкой нового
+    resultArea.classList.add('hidden');
+    
+    const currentQuestion = quizData[currentQuestionIndex];
+    questionCounterEl.textContent = `Вопрос ${currentQuestionIndex + 1} из ${quizData.length}`;
+    questionTextEl.textContent = currentQuestion.question;
+
+    // Управление навигационными кнопками
+    prevQuestionBtn.disabled = currentQuestionIndex === 0;
+    nextQuestionBtn.textContent = (currentQuestionIndex === quizData.length - 1) ? 'Завершить' : 'Далее';
+
+    // Проверяем, был ли дан ответ на этот вопрос ранее
+    if (currentQuestion.userAnswer !== null) {
+        // Режим просмотра
+        answerInput.value = currentQuestion.userAnswer;
+        answerInput.disabled = true;
+        submitBtn.style.display = 'none';
+        displayStoredResult(currentQuestion);
+    } else {
+        // Режим ответа
+        answerInput.value = '';
+        answerInput.disabled = false;
+        submitBtn.style.display = 'block';
+        resultArea.classList.add('hidden');
+    }
+}
+
+// Отображение ранее полученного результата
+function displayStoredResult(question) {
+    resultArea.classList.remove('hidden');
+    resultArea.textContent = question.aiFeedback;
+    if (question.isCorrect) {
+        resultArea.className = 'result-area correct';
+    } else {
+        resultArea.className = 'result-area wrong';
+    }
+}
+
+// Обработка отправки ответа
+submitBtn.addEventListener('click', handleSubmission);
+answerInput.addEventListener('keyup', (event) => {
+    if (event.key === 'Enter' && !answerInput.disabled) {
+        handleSubmission();
+    }
+});
+
+async function handleSubmission() {
+    const userAnswer = answerInput.value.trim();
+    if (!userAnswer) {
+        alert("Пожалуйста, введите ответ.");
+        return;
+    }
+
+    answerInput.disabled = true;
+    submitBtn.disabled = true;
+    showLoading();
+
+    const correctAnswer = quizData[currentQuestionIndex].answer;
+    try {
+        const aiResponse = await getAiFeedback(userAnswer, correctAnswer);
+        processAiResponse(aiResponse, userAnswer);
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+function showLoading() {
+    resultArea.classList.remove('hidden');
+    resultArea.className = 'result-area loading';
+    resultArea.textContent = 'Gemini анализирует ваш ответ...';
+}
+
+function showError(message) {
+     resultArea.className = 'result-area wrong';
+     resultArea.textContent = `Произошла ошибка: ${message}.`;
+}
+
+async function getAiFeedback(userAnswer, correctAnswer) {
+    const prompt = `Ты — ассистент для проведения теста. Сравни ответ пользователя с правильным ответом.
+Правильный ответ: "${correctAnswer}"
+Ответ пользователя: "${userAnswer || 'Пользователь не дал ответ'}"
+
+Твоя задача:
+1. Определи, является ли ответ пользователя верным (допускай небольшие опечатки или синонимы).
+2. Дай очень короткое пояснение (одно предложение).
+3. ВАЖНО: Весь твой ответ ДОЛЖЕН начинаться с ключевого слова !RIGHT, если ответ верный, или !FALL, если неверный. Никакого текста перед ключевым словом быть не должно.
+
+Пример 1:
+!RIGHT Отлично! Канберра действительно является столицей Австралии.
+
+Пример 2:
+!FALL Неверно. Правильный ответ — Лев Толстой.`;
+    
+    const API_URL = `${GEMINI_API_BASE_URL}${GEMINI_MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ "contents": [{ "parts": [{ "text": prompt }] }] })
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        throw new Error('Некорректная структура ответа от Gemini API.');
+    }
+    return data.candidates[0].content.parts[0].text;
+}
+
+function processAiResponse(response, userAnswer) {
+    let explanation = response;
+    let isCorrect = false;
+
+    if (response.startsWith('!RIGHT')) {
+        score++;
+        isCorrect = true;
+        resultArea.className = 'result-area correct';
+        explanation = response.substring('!RIGHT'.length).trim();
+    } else {
+        resultArea.className = 'result-area wrong';
+        if (response.startsWith('!FALL')) {
+            explanation = response.substring('!FALL'.length).trim();
+        }
+    }
+    
+    resultArea.textContent = explanation || "Не удалось получить пояснение.";
+    updateScore();
+    
+    // Сохраняем результат
+    const currentQuestion = quizData[currentQuestionIndex];
+    currentQuestion.userAnswer = userAnswer;
+    currentQuestion.aiFeedback = explanation;
+    currentQuestion.isCorrect = isCorrect;
+    
+    submitBtn.style.display = 'none'; // Скрываем кнопку "Ответить" после ответа
+}
+
+// Навигация
+prevQuestionBtn.addEventListener('click', () => {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        loadQuestion();
+    }
+});
+
+nextQuestionBtn.addEventListener('click', () => {
+    if (currentQuestionIndex < quizData.length - 1) {
+        currentQuestionIndex++;
+        loadQuestion();
+    } else {
+        showFinalResults();
+    }
+});
+
+finishBtn.addEventListener('click', () => {
+    if (confirm("Вы уверены, что хотите завершить тест досрочно?")) {
+        showFinalResults();
+    }
+});
+
+
+function updateScore() {
+    scoreEl.textContent = `Счет: ${score}`;
+}
+
+// Логика секундомера
+function startStopwatch() {
+    quizStartTime = Date.now();
+    stopwatchInterval = setInterval(updateStopwatch, 1000);
+}
+
+function updateStopwatch() {
+    const elapsedSeconds = Math.floor((Date.now() - quizStartTime) / 1000);
+    stopwatchEl.textContent = formatTime(elapsedSeconds);
+}
+
+function formatTime(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return [hours, minutes, seconds]
+        .map(v => v.toString().padStart(2, '0'))
+        .join(':');
+}
+
+// Завершение теста
+function showFinalResults() {
+    clearInterval(stopwatchInterval);
+    const totalTime = stopwatchEl.textContent;
+    
+    showSection('final-results');
+    finalScoreEl.textContent = `Ваш итоговый счет: ${score} из ${quizData.length}`;
+    finalTimeEl.textContent = `Затраченное время: ${totalTime}`;
+}
+
+backToMenuBtn.addEventListener('click', () => {
+    showSection('menu-section');
+});
+</script>
+</body>
+</html>
