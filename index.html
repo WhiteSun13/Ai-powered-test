@@ -161,7 +161,7 @@
                 <button id="next-question-btn" class="button">Далее</button>
             </div>
             <h2 id="question-text"></h2>
-            <input type="text" id="answer-input" placeholder="Введите ваш ответ здесь...">
+            <textarea id="answer-input" name="answer-input" placeholder="Введите ваш ответ здесь..."></textarea>
             <button id="submit-btn" class="button">Ответить</button>
             <div id="result-area" class="hidden"></div>
             <button id="finish-btn" class="button" style="background-color: #dc3545;">Завершить тест</button>
@@ -385,7 +385,13 @@ async function getAiFeedback(currentQuest, userAnswer, correctAnswer) {
 Твоя задача:
 1. Определи, является ли ответ пользователя верным. Допускай опечатки (если они не меняют смысл слова) или синонимы. Допускай неполные и короткие ответы, если они отвечают на вопрос.
 2. Дай короткое пояснение с обращением к пользователю.
-3. ВАЖНО: Весь твой ответ ДОЛЖЕН начинаться с ключевого слова !RIGHT, если ответ верный, или !FALL, если неверный. Никакого текста или символа перед ключевым словом быть не должно.`;
+3. ВАЖНО: Весь твой ответ ДОЛЖЕН начинаться с ключевого слова !RIGHT, если ответ верный, или !FALL, если неверный. Никакого текста ключевым словом быть не должно. Никакого символа после ключевого слова быть не должно
+
+Пример 1:
+!RIGHT Отлично! Канберра действительно является столицей Австралии.
+
+Пример 2:
+!FALL Неверно. Правильный ответ — Лев Толстой.`;
     
     const API_URL = `${GEMINI_API_BASE_URL}${GEMINI_MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(API_URL, {
