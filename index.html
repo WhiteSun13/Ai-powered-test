@@ -380,7 +380,7 @@ function showError(message) {
 async function getAiFeedback(currentQuest, userAnswer, correctAnswer) {
     const prompt = `Ты — ассистент для проведения теста. Проверь ответ пользователя и сравни с правильным ответом.
 Вопрос: "${currentQuest}"
-Правильный ответ: "${correctAnswer}"
+Возможный правильный ответ: "${correctAnswer}"
 Ответ пользователя: "${userAnswer || 'Пользователь не дал ответ'}"
 
 Твоя задача:
