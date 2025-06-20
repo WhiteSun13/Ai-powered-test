@@ -29,7 +29,7 @@
         .main-section.hidden {
             display: none;
         }
-        .hidden {
+        #result-area.hidden {
             display: none;
         }
         h1, h2 {
@@ -156,15 +156,15 @@
                 <span id="score">Счет: 0</span>
                 <span id="stopwatch">00:00:00</span>
             </div>
-            <h2 id="question-text"></h2>
-            <input type="text" id="answer-input" placeholder="Введите ваш ответ здесь...">
-            <button id="submit-btn" class="button">Ответить</button>
-            <div id="result-area" class="hidden"></div>
             <div id="navigation-buttons">
                 <button id="prev-question-btn" class="button">Назад</button>
                 <button id="next-question-btn" class="button">Далее</button>
             </div>
-             <button id="finish-btn" class="button" style="background-color: #dc3545;">Завершить тест</button>
+            <h2 id="question-text"></h2>
+            <input type="text" id="answer-input" placeholder="Введите ваш ответ здесь...">
+            <button id="submit-btn" class="button">Ответить</button>
+            <div id="result-area" class="hidden"></div>
+            <button id="finish-btn" class="button" style="background-color: #dc3545;">Завершить тест</button>
         </div>
 
         <!-- Секция 4: Финальные результаты -->
