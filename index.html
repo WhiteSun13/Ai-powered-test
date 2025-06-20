@@ -51,6 +51,10 @@
             color: #000;
             min-height: 60px;
         }
+        .correct-answer-text {
+            white-space: pre-wrap; 
+            margin-top: 0.5rem;
+        }
         #answer-input {
             width: 100%;
             padding: 0.8rem;
@@ -213,11 +217,7 @@ let quizStartTime;
 // Показывает нужную секцию, скрывая остальные
 function showSection(sectionId) {
     sections.forEach(section => {
-        if (section.id === sectionId) {
-            section.classList.remove('hidden');
-        } else {
-            section.classList.add('hidden');
-        }
+        section.id === sectionId ? section.classList.remove('hidden') : section.classList.add('hidden');
     });
 }
 
@@ -317,23 +317,24 @@ function loadQuestion() {
     }
 }
 
-// Отображение ранее полученного результата
+// <-- ИЗМЕНЕНО: Функция теперь формирует HTML с комментарием ИИ и правильным ответом
 function displayStoredResult(question) {
     resultArea.classList.remove('hidden');
-    resultArea.textContent = question.aiFeedback;
-    if (question.isCorrect) {
-        resultArea.className = 'result-area correct';
-    } else {
-        resultArea.className = 'result-area wrong';
-    }
+    resultArea.className = question.isCorrect ? 'result-area correct' : 'result-area wrong';
+    
+    resultArea.innerHTML = `
+        <p>${question.aiFeedback}</p>
+        <hr>
+        <div>
+            <strong>Правильный ответ:</strong>
+            <p class="correct-answer-text">${question.answer}</p>
+        </div>
+    `;
 }
 
-// Обработка отправки ответа
 submitBtn.addEventListener('click', handleSubmission);
 answerInput.addEventListener('keyup', (event) => {
-    if (event.key === 'Enter' && !answerInput.disabled) {
-        handleSubmission();
-    }
+    if (event.key === 'Enter' && !answerInput.disabled) handleSubmission();
 });
 
 async function handleSubmission() {
@@ -347,10 +348,12 @@ async function handleSubmission() {
     submitBtn.disabled = true;
     showLoading();
 
-    const correctAnswer = quizData[currentQuestionIndex].answer;
-    const question = quizData[currentQuestionIndex].answer;
+    const currentQuestionData = quizData[currentQuestionIndex];
+    const questionText = currentQuestionData.question; 
+    const correctAnswer = currentQuestionData.answer;
+
     try {
-        const aiResponse = await getAiFeedback(question, userAnswer, correctAnswer);
+        const aiResponse = await getAiFeedback(questionText, userAnswer, correctAnswer);
         processAiResponse(aiResponse, userAnswer);
     } catch (error) {
         showError(error.message);
@@ -370,22 +373,16 @@ function showError(message) {
      resultArea.textContent = `Произошла ошибка: ${message}.`;
 }
 
-async function getAiFeedback(curentQuest, userAnswer, correctAnswer) {
+async function getAiFeedback(currentQuest, userAnswer, correctAnswer) {
     const prompt = `Ты — ассистент для проведения теста. Проверь ответ пользователя и сравни с правильным ответом.
-Вопрос: "${curentQuest}"
+Вопрос: "${currentQuest}"
 Правильный ответ: "${correctAnswer}"
 Ответ пользователя: "${userAnswer || 'Пользователь не дал ответ'}"
 
 Твоя задача:
 1. Определи, является ли ответ пользователя верным. Допускай опечатки (если они не меняют смысл слова) или синонимы. Допускай неполные и короткие ответы, если они отвечают на вопрос.
 2. Дай короткое пояснение с обращением к пользователю.
-3. ВАЖНО: Весь твой ответ ДОЛЖЕН начинаться с ключевого слова !RIGHT, если ответ верный, или !FALL, если неверный. Никакого текста перед ключевым словом быть не должно.
-
-Пример 1:
-!RIGHT Отлично! Канберра действительно является столицей Австралии.
-
-Пример 2:
-!FALL Неверно. Правильный ответ — Лев Толстой.`;
+3. ВАЖНО: Весь твой ответ ДОЛЖЕН начинаться с ключевого слова !RIGHT, если ответ верный, или !FALL, если неверный. Никакого текста перед ключевым словом быть не должно.`;
     
     const API_URL = `${GEMINI_API_BASE_URL}${GEMINI_MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(API_URL, {
@@ -404,6 +401,7 @@ async function getAiFeedback(curentQuest, userAnswer, correctAnswer) {
     return data.candidates[0].content.parts[0].text;
 }
 
+// <-- ИЗМЕНЕНО: Функция теперь формирует HTML с комментарием ИИ и правильным ответом
 function processAiResponse(response, userAnswer) {
     let explanation = response;
     let isCorrect = false;
@@ -420,7 +418,18 @@ function processAiResponse(response, userAnswer) {
         }
     }
     
-    resultArea.textContent = explanation || "Не удалось получить пояснение.";
+    const correctAnswer = quizData[currentQuestionIndex].answer;
+    
+    // Формируем HTML для блока результатов
+    resultArea.innerHTML = `
+        <p>${explanation || "Не удалось получить пояснение."}</p>
+        <hr>
+        <div>
+            <strong>Правильный ответ:</strong>
+            <p class="correct-answer-text">${correctAnswer}</p>
+        </div>
+    `;
+
     updateScore();
     
     // Сохраняем результат
@@ -475,9 +484,7 @@ function formatTime(totalSeconds) {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    return [hours, minutes, seconds]
-        .map(v => v.toString().padStart(2, '0'))
-        .join(':');
+    return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
 }
 
 // Завершение теста
