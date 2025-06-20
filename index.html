@@ -29,6 +29,9 @@
         .main-section.hidden {
             display: none;
         }
+        .hidden {
+            display: none;
+        }
         h1, h2 {
             color: #333;
         }
@@ -323,7 +326,7 @@ function displayStoredResult(question) {
     resultArea.className = question.isCorrect ? 'result-area correct' : 'result-area wrong';
     
     resultArea.innerHTML = `
-        <p>${question.aiFeedback}</p>
+        <p class="correct-answer-text">${question.aiFeedback}</p>
         <hr>
         <div>
             <strong>Правильный ответ:</strong>
@@ -422,7 +425,7 @@ function processAiResponse(response, userAnswer) {
     
     // Формируем HTML для блока результатов
     resultArea.innerHTML = `
-        <p>${explanation || "Не удалось получить пояснение."}</p>
+        <p class="correct-answer-text">${explanation || "Не удалось получить пояснение."}</p>
         <hr>
         <div>
             <strong>Правильный ответ:</strong>
