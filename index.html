@@ -348,8 +348,9 @@ async function handleSubmission() {
     showLoading();
 
     const correctAnswer = quizData[currentQuestionIndex].answer;
+    const question = quizData[currentQuestionIndex].answer;
     try {
-        const aiResponse = await getAiFeedback(userAnswer, correctAnswer);
+        const aiResponse = await getAiFeedback(question, userAnswer, correctAnswer);
         processAiResponse(aiResponse, userAnswer);
     } catch (error) {
         showError(error.message);
@@ -369,14 +370,15 @@ function showError(message) {
      resultArea.textContent = `Произошла ошибка: ${message}.`;
 }
 
-async function getAiFeedback(userAnswer, correctAnswer) {
-    const prompt = `Ты — ассистент для проведения теста. Сравни ответ пользователя с правильным ответом.
+async function getAiFeedback(curentQuest, userAnswer, correctAnswer) {
+    const prompt = `Ты — ассистент для проведения теста. Проверь ответ пользователя и сравни с правильным ответом.
+Вопрос: "${curentQuest}"
 Правильный ответ: "${correctAnswer}"
 Ответ пользователя: "${userAnswer || 'Пользователь не дал ответ'}"
 
 Твоя задача:
-1. Определи, является ли ответ пользователя верным (допускай небольшие опечатки или синонимы).
-2. Дай очень короткое пояснение (одно предложение).
+1. Определи, является ли ответ пользователя верным. Допускай опечатки (если они не меняют смысл слова) или синонимы. Также можешь допускасть неполные ответы, если они отвечают на вопрос.
+2. Дай короткое пояснение с обращение к пользователю.
 3. ВАЖНО: Весь твой ответ ДОЛЖЕН начинаться с ключевого слова !RIGHT, если ответ верный, или !FALL, если неверный. Никакого текста перед ключевым словом быть не должно.
 
 Пример 1:
